@@ -9,6 +9,7 @@ var Socket = require('./socket');
 var uuid = require('uuid');
 
 var dynamicModeOn = false;
+var hardwarePlaybackOn = false;
 
 var selection = {
   ids: {
@@ -433,6 +434,7 @@ var $toggleScrobble = $('#toggle-scrobble');
 var $shortcuts = $('#shortcuts');
 var $playlistMenu = $('#menu-playlist');
 var $libraryMenu = $('#menu-library');
+var $toggleHardwarePlayback = $('#toggle-hardware-playback');
 
 function saveLocalState(){
   localStorage.setItem('state', JSON.stringify(localState));
@@ -1960,8 +1962,16 @@ function updateSettingsAuthUi() {
   streamUrlDom.setAttribute('href', streaming.getUrl());
 }
 
+function updateSettingsAdminUi() {
+  $toggleHardwarePlayback
+    .button('option', 'label', hardwarePlaybackOn ? 'On' : 'Off')
+    .prop('checked', hardwarePlaybackOn)
+    .button('refresh');
+}
+
 function setUpSettingsUi(){
   $toggleScrobble.button();
+  $toggleHardwarePlayback.button();
   $lastFmSignOut.button();
   $settingsAuthCancel.button();
   $settingsAuthSave.button();
@@ -1993,6 +2003,11 @@ function setUpSettingsUi(){
     };
     socket.send(msg, params);
     updateLastFmSettingsUi();
+  });
+  $toggleHardwarePlayback.on('click', function(event) {
+    var value = $(this).prop('checked');
+    socket.send('hardwarePlayback', value);
+    updateSettingsAdminUi();
   });
   $settingsAuthEdit.on('click', function(event) {
     settings_ui.auth.show_edit = true;
@@ -2300,6 +2315,10 @@ $document.ready(function(){
     });
     return;
   }
+  socket.on('hardwarePlayback', function(isOn) {
+    hardwarePlaybackOn = isOn;
+    updateSettingsAdminUi();
+  });
   socket.on('LastFmApiKey', updateLastFmApiKey);
   socket.on('permissions', function(data){
     permissions = data;
@@ -2324,6 +2343,7 @@ $document.ready(function(){
   });
   socket.on('connect', function(){
     socket.send('subscribe', {name: 'dynamicModeOn'});
+    socket.send('subscribe', {name: 'hardwarePlayback'});
     sendAuth();
     load_status = LoadStatus.GoodToGo;
     render();
